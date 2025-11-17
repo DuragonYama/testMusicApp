@@ -44,12 +44,9 @@ currentTime: ${audio?.currentTime}
     if (debugDiv) debugDiv.textContent += msg;
   };
 
-  // Update metadata when track changes
-  useEffect(() => {
-    if (currentIndex === null) return;
-    const song = songs[currentIndex];
-    logDebug("Loading new song: " + song.name);
-
+  // Helper to update Media Session metadata
+  const updateMetadata = (index: number) => {
+    const song = songs[index];
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: song.name,
@@ -58,26 +55,41 @@ currentTime: ${audio?.currentTime}
           { src: song.artwork, sizes: "512x512", type: "image/jpeg" },
         ],
       });
-
-      navigator.mediaSession.setActionHandler("nexttrack", () => {
-        setCurrentIndex((i) => (i! + 1) % songs.length);
-      });
-
-      navigator.mediaSession.setActionHandler("previoustrack", () => {
-        setCurrentIndex((i) => (i! - 1 + songs.length) % songs.length);
-      });
+      logDebug("updateMetadata: " + song.name);
     }
-  }, [currentIndex]);
+  };
+
+  // Set up Media Session action handlers
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
+      setCurrentIndex((i) => {
+        const next = (i! + 1) % songs.length;
+        updateMetadata(next);
+        return next;
+      });
+    });
+
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+      setCurrentIndex((i) => {
+        const prev = (i! - 1 + songs.length) % songs.length;
+        updateMetadata(prev);
+        return prev;
+      });
+    });
+  }, []);
 
   // Media session position updates
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !("mediaSession" in navigator)) return;
 
+    let interval: number | null = null;
+
     const updatePosition = () => {
       if (!audio || isNaN(audio.duration) || audio.duration === 0) return;
 
-      // Always update position when we have valid duration
       try {
         navigator.mediaSession.setPositionState({
           duration: audio.duration,
@@ -94,31 +106,33 @@ currentTime: ${audio?.currentTime}
       if (!audio) return;
       navigator.mediaSession.playbackState = audio.paused ? "paused" : "playing";
       logDebug("updatePlaybackState()");
+
+      // Start/stop interval depending on play state
+      if (!audio.paused) {
+        if (!interval) {
+          interval = window.setInterval(updatePosition, 500); // update every 0.5s
+        }
+      } else {
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
+      }
     };
 
-    const events = [
-      "loadedmetadata",
-      "durationchange",
-      "timeupdate",
-      "seeked",
-      "play",
-      "pause",
-      "canplay",
-    ] as const;
+    const events = ["play", "pause", "loadedmetadata", "durationchange"] as const;
 
     const handlers: { [key: string]: () => void } = {
-      loadedmetadata: updatePosition,
-      durationchange: updatePosition,
-      timeupdate: updatePosition,
-      seeked: updatePosition,
-      canplay: updatePosition,
       play: updatePlaybackState,
       pause: updatePlaybackState,
+      loadedmetadata: updatePosition,
+      durationchange: updatePosition,
     };
 
     events.forEach((event) => audio.addEventListener(event, handlers[event]));
 
     return () => {
+      if (interval) clearInterval(interval);
       events.forEach((event) =>
         audio.removeEventListener(event, handlers[event])
       );
@@ -132,8 +146,11 @@ currentTime: ${audio?.currentTime}
       <ul className="space-y-2 mb-6">
         {songs.map((song, i) => (
           <li key={song.file}>
-            <button 
-              onClick={() => setCurrentIndex(i)}
+            <button
+              onClick={() => {
+                setCurrentIndex(i);
+                updateMetadata(i); // update metadata immediately on click
+              }}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition w-full text-left"
             >
               ▶️ {song.name}
@@ -145,15 +162,21 @@ currentTime: ${audio?.currentTime}
       {currentIndex !== null && (
         <div className="mt-6 p-4 bg-gray-100 rounded">
           <h2 className="text-xl font-semibold mb-2">Now Playing:</h2>
-          <audio ref={audioRef} controls autoPlay src={songs[currentIndex].file} className="w-full" />
+          <audio
+            ref={audioRef}
+            controls
+            autoPlay
+            src={songs[currentIndex].file}
+            className="w-full"
+          />
         </div>
       )}
 
       {/* Debug log area */}
-      <pre
+      {/* <pre
         id="debug-log"
         className="mt-6 bg-gray-200 p-3 rounded text-xs overflow-y-scroll max-h-80 whitespace-pre-wrap"
-      ></pre>
+      ></pre> */}
     </div>
   );
 }
