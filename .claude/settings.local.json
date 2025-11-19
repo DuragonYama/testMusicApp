@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)",
+      "Bash(npm run preview:*)",
+      "Bash(vercel:*)",
+      "Bash(git add src/ public/ index.html package.json package-lock.json vite.config.ts create-icons.js .claude/)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

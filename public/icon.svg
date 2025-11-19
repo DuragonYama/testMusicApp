@@ -1,0 +1,22 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spotify green background -->
+  <rect width="512" height="512" fill="#1DB954"/>
+
+  <!-- Music note symbol in black -->
+  <g fill="#000000">
+    <!-- Note head 1 -->
+    <ellipse cx="180" cy="370" rx="50" ry="40"/>
+
+    <!-- Note head 2 -->
+    <ellipse cx="300" cy="350" rx="50" ry="40"/>
+
+    <!-- Note stem 1 -->
+    <rect x="220" y="200" width="20" height="180"/>
+
+    <!-- Note stem 2 -->
+    <rect x="340" y="180" width="20" height="180"/>
+
+    <!-- Connecting bar -->
+    <path d="M 240 200 L 360 180 L 360 200 L 240 220 Z"/>
+  </g>
+</svg>
